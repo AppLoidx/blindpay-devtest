@@ -1,82 +1,69 @@
-# BlindPay Test Service
+# CLAUDE.md
 
-Test service wrapping BlindPay crypto-fiat API. Two pre-seeded users (Alice, Bob) with wallets on Polygon Amoy testnet.
+## Project
 
-## Quick Start
-
-```bash
-mvn spring-boot:run          # Start on :8080
-mvn test                     # Run 15 unit tests
-mvn test-compile org.pitest:pitest-maven:mutationCoverage  # Mutation testing
-```
-
-- UI: http://localhost:8080/index.html
-- H2 console: http://localhost:8080/h2-console (jdbc:h2:mem:blindpay, user: sa)
-
-## Stack
-
-Java 21, Spring Boot 3.4.5, Spring Data JPA, H2 in-memory, Lombok, Maven
+BlindPay Test Service — Spring Boot wrapper around BlindPay crypto-fiat API. Demonstrates fiat→crypto→fiat flow between two pre-seeded users (Alice, Bob) on Polygon Amoy testnet. Experiment/test tool, not production.
 
 ## Architecture
 
-### BlindPay API Communication
+Controller → Service → BlindPayApiService (curl) → BlindPay API. No auth layer.
 
-**Cloudflare blocks all Java HTTP clients** via TLS fingerprinting. `BlindPayApiService` uses `curl` via `ProcessBuilder` instead of RestClient/HttpClient. This is intentional — do not attempt to switch back to a Java HTTP client.
+- `BlindPayApiService` shells out to `curl` via `ProcessBuilder` — **Cloudflare blocks all Java HTTP clients** (TLS fingerprinting). Do not revert to RestClient/HttpClient/OkHttp.
+- `RestClientConfig` exists but has no active beans — intentionally empty.
+- `DataInitializer` (CommandLineRunner) seeds Alice & Bob on startup with hardcoded BlindPay resource IDs. H2 in-memory with `ddl-auto: create` — data resets every restart.
+- Two BlindPay API path prefixes: `/v1/instances/{id}/` (direct, used for most calls) and `/v1/e/instances/{id}/` (embedded, used only for TOS URL generation). Most endpoints are receiver-scoped: `/v1/instances/{id}/receivers/{re_id}/bank-accounts|wallets|blockchain-wallets`.
+- Amounts are integers in cents (10000 = $100.00).
 
-### API Paths
+## Tech Stack
 
-BlindPay has two API path prefixes:
-- `/v1/instances/{id}/` — direct API, requires full KYC fields + `tos_id` in body (used for receivers)
-- `/v1/e/instances/{id}/` — embedded flow, requires short-lived token from TOS acceptance (used for TOS URL generation only)
+- Java 21 (Corretto), Spring Boot 3.4.5, Maven
+- Spring Web, Spring Data JPA, H2 (in-memory, runtime)
+- Lombok, Jackson, httpclient5 (unused dep from earlier iteration)
+- Testing: JUnit 5, Mockito, MockMvc, PITest 1.17.4
+- No auth, no Spring Security, no profiles
 
-Most endpoints are receiver-scoped:
-- `/v1/instances/{id}/receivers/{re_id}/bank-accounts`
-- `/v1/instances/{id}/receivers/{re_id}/wallets`
-- `/v1/instances/{id}/receivers/{re_id}/wallets/{wl_id}/balance`
-- `/v1/instances/{id}/receivers/{re_id}/blockchain-wallets`
+## Critical Commands
 
-### Key Differences from BlindPay Docs
-
-The official docs are often incomplete or use different field names than the actual API:
-- `payment_rail` → `type`, `beneficiary_name` → `name` (bank accounts)
-- `amount` → `request_amount`, need `currency_type`/`token`/`network` (quotes)
-- Transfer quotes need `amount_reference`, `sender_token`, `receiver_token`, `receiver_network`
-- Upload endpoint is at `/v1/upload` (not instance-scoped), needs `bucket=onboarding`
-- TOS tokens (`to_xxx`) are single-use per receiver and expire quickly on `/e/` path but persist on direct path
-
-### Network & Payment Rail
-
-- **Network:** `polygon_amoy` (dev testnet). `base_sepolia` is disabled for managed wallets.
-- **Payment rail:** `pix` (PIX). ACH had undocumented required fields.
-- **Stablecoin:** `USDB` (dev token)
-
-## Project Structure
-
-```
-service/
-  BlindPayApiService.java   — All BlindPay API calls (via curl)
-  UserService.java          — Business logic (payin/payout/transfer/balance)
-controller/
-  UserController.java       — GET /api/users, /balance, POST /payin, /payout
-  TransferController.java   — POST /api/transfer
-  SetupController.java      — GET / (status)
-bootstrap/
-  DataInitializer.java      — Seeds Alice & Bob with pre-existing BlindPay resource IDs
-model/User.java             — JPA entity with BlindPay IDs
+```bash
+mvn spring-boot:run                                          # Start on :8080
+mvn test                                                     # 15 unit tests
+mvn test-compile org.pitest:pitest-maven:mutationCoverage    # Mutation report → target/pit-reports/*/index.html
 ```
 
-## Testing
+- UI: http://localhost:8080/index.html
+- H2 console: http://localhost:8080/h2-console (jdbc:h2:mem:blindpay, sa, no password)
+- Status: http://localhost:8080/
 
-- Unit tests mock `BlindPayApiService` — never hit real API
-- `@MockitoBean` (not `@MockBean` — removed in Spring Boot 3.4)
-- PITest report: `target/pit-reports/*/index.html`
+## Conventions
 
-## Configuration
+- Package structure: `config/`, `model/`, `repository/`, `service/`, `controller/`, `dto/`, `exception/`, `bootstrap/`
+- DTOs suffixed with `Request` (`PayinRequest`, `PayoutRequest`, `TransferRequest`). Error responses use `ApiErrorResponse`.
+- Exception handling: `@RestControllerAdvice` in `GlobalExceptionHandler`. `BlindPayApiException` passes through BlindPay's HTTP status. `IllegalArgumentException` → 400.
+- Constructor injection via Lombok `@RequiredArgsConstructor`. No field injection.
+- Tests use `@MockitoBean` (not `@MockBean` — removed in Spring Boot 3.4). AssertJ for service tests, Hamcrest for MockMvc.
+- Test naming: `methodName_condition_expectedResult`
 
-All BlindPay config in `application.yml` under `blindpay.*`:
-- `api-key`, `instance-id`, `base-url`, `tos-id`
-- **Do not commit real API keys to public repos**
+## Gotchas
 
-## Pre-seeded Users
+- **API key in application.yml** (`blindpay.api-key`). Not in env vars. Do not push to public repos.
+- **curl must be on PATH** — `BlindPayApiService` depends on it at runtime.
+- **Pre-seeded users are hardcoded** in `DataInitializer` with specific BlindPay resource IDs. Creating new users requires TOS acceptance + receiver creation via BlindPay API (see specs). TOS tokens are single-use per receiver.
+- **BlindPay docs are inaccurate**: field names differ from actual API (`payment_rail`→`type`, `amount`→`request_amount`, `beneficiary_name`→`name`). Transfer quotes need `amount_reference`, `sender_token`, `receiver_token`, `receiver_network`. Upload is at `/v1/upload` with `bucket=onboarding`.
+- **Network is polygon_amoy**, not base_sepolia (disabled for managed wallets). Payment rail is PIX, not ACH.
+- **Dev payins may not auto-complete** — PIX payins on dev can stay in `processing` indefinitely.
+- **httpclient5 dependency is unused** — leftover from an earlier attempt to bypass Cloudflare. Safe to remove.
 
-Users are hardcoded in `DataInitializer` with existing BlindPay resource IDs. To reset, you need new TOS acceptances + new receivers via the BlindPay API (see `docs/superpowers/specs/` for the full setup flow).
+## Out of Scope
+
+- Do not add Spring Security or authentication — this is a test tool.
+- Do not replace curl/ProcessBuilder with a Java HTTP client — Cloudflare will block it.
+- Do not change pre-seeded user IDs without creating new BlindPay resources first.
+- Do not add new BlindPay endpoints without testing field names via curl first — the docs lie.
+
+## References
+
+Design specs and implementation plans:
+- `docs/superpowers/specs/2026-05-31-blindpay-test-service-design.md`
+- `docs/superpowers/specs/2026-05-31-tests-ui-design.md`
+- `docs/superpowers/plans/2026-05-31-blindpay-test-service.md`
+- `docs/superpowers/plans/2026-05-31-tests-ui-pitest.md`
