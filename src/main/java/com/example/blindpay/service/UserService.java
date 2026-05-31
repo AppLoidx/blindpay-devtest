@@ -12,10 +12,14 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class UserService {
+public class UserService implements UserServiceApi {
 
     private final UserRepository userRepository;
     private final BlindPayApiService blindPayApi;
+
+    public long getUserCount() {
+        return userRepository.count();
+    }
 
     public List<User> getAllUsers() {
         return userRepository.findAll();

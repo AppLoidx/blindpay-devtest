@@ -12,7 +12,7 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class BlindPayApiService {
+public class BlindPayApiService implements BlindPayApi {
 
     private static final String NETWORK = "polygon_amoy";
     private static final String NETWORK_KEY = "network";
