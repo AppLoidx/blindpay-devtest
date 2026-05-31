@@ -15,10 +15,6 @@ import java.util.UUID;
 @SuppressWarnings("PMD.TooManyMethods") // [NEEDS-REFACTOR] 16 methods map to distinct API endpoints
 public class BlindPayApiService implements BlindPayApi {
 
-    // [NEEDS-REFACTOR] TooManyMethods: class has 16 public methods (max 15).
-    // Each method maps to a distinct BlindPay API endpoint — splitting requires
-    // grouping by domain (payin, payout, transfer, receiver) into sub-services.
-
     private static final String NETWORK = "polygon_amoy";
     private static final String NETWORK_KEY = "network";
     private static final String RECEIVERS_PATH = "/receivers/";
@@ -32,16 +28,12 @@ public class BlindPayApiService implements BlindPayApi {
     private String instanceUrl() {
         return properties.getBaseUrl() + "/v1/instances/" + properties.getInstanceId();
     }
-
     private String eInstanceUrl() {
         return properties.getBaseUrl() + "/v1/e/instances/" + properties.getInstanceId();
     }
-
     private String receiverUrl(String receiverId) {
         return instanceUrl() + RECEIVERS_PATH + receiverId;
     }
-
-    // --- TOS ---
 
     public Map<String, Object> createTosUrl(String redirectUrl) {
         log.info("=== Creating TOS acceptance URL ===");
@@ -52,19 +44,31 @@ public class BlindPayApiService implements BlindPayApi {
         return http.post(eInstanceUrl() + "/tos", body);
     }
 
-    // --- Upload (for KYC files) ---
-
     public String uploadFile(String filePath) {
         log.info("=== Uploading file: {} ===", filePath);
         return http.uploadForm(properties.getBaseUrl() + "/v1/upload", filePath, "onboarding");
     }
 
-    // --- Receivers ---
-
     public Map<String, Object> createReceiver(String firstName, String lastName,
                                                String email, String tosId,
                                                String selfieFileUrl, String idDocFrontFileUrl) {
         log.info("=== Creating receiver: {} {} ===", firstName, lastName);
+        Map<String, Object> body = buildReceiverBody(
+                firstName, lastName, email, tosId, selfieFileUrl, idDocFrontFileUrl);
+        return http.post(instanceUrl() + "/receivers", body);
+    }
+
+    private Map<String, Object> buildReceiverBody(String firstName, String lastName,
+                                                   String email, String tosId,
+                                                   String selfieFileUrl, String idDocFrontFileUrl) {
+        Map<String, Object> body = buildReceiverIdentity(firstName, lastName, email);
+        body.put("selfie_file", selfieFileUrl);
+        body.put("id_doc_front_file", idDocFrontFileUrl);
+        body.put("tos_id", tosId);
+        return body;
+    }
+
+    private Map<String, Object> buildReceiverIdentity(String firstName, String lastName, String email) {
         Map<String, Object> body = new HashMap<>();
         body.put("first_name", firstName);
         body.put("last_name", lastName);
@@ -80,18 +84,12 @@ public class BlindPayApiService implements BlindPayApi {
         body.put("date_of_birth", "1990-01-01T00:00:00.000Z");
         body.put("id_doc_country", "US");
         body.put("id_doc_type", "PASSPORT");
-        body.put("selfie_file", selfieFileUrl);
-        body.put("id_doc_front_file", idDocFrontFileUrl);
-        body.put("tos_id", tosId);
-        return http.post(instanceUrl() + "/receivers", body);
+        return body;
     }
 
     public Map<String, Object> getReceiver(String receiverId) {
-        log.info("=== Getting receiver {} ===", receiverId);
         return http.get(receiverUrl(receiverId));
     }
-
-    // --- Bank Accounts (PIX for dev simplicity) ---
 
     public Map<String, Object> createBankAccount(String receiverId,
                                                   String name, String pixKey) {
@@ -103,8 +101,6 @@ public class BlindPayApiService implements BlindPayApi {
         );
         return http.post(receiverUrl(receiverId) + "/bank-accounts", body);
     }
-
-    // --- Blockchain Wallets ---
 
     public Map<String, Object> createBlockchainWallet(String receiverId,
                                                        String name,
@@ -119,8 +115,6 @@ public class BlindPayApiService implements BlindPayApi {
         return http.post(receiverUrl(receiverId) + "/blockchain-wallets", body);
     }
 
-    // --- Managed Wallets ---
-
     public Map<String, Object> createWallet(String receiverId, String name) {
         log.info("=== Creating managed wallet for receiver {} ===", receiverId);
         Map<String, Object> body = Map.of(
@@ -131,16 +125,12 @@ public class BlindPayApiService implements BlindPayApi {
     }
 
     public Map<String, Object> getWallet(String receiverId, String walletId) {
-        log.info("=== Getting wallet {} for receiver {} ===", walletId, receiverId);
         return http.get(receiverUrl(receiverId) + "/wallets/" + walletId);
     }
 
     public Map<String, Object> getWalletBalance(String receiverId, String walletId) {
-        log.info("=== Getting wallet balance {} for receiver {} ===", walletId, receiverId);
         return http.get(receiverUrl(receiverId) + "/wallets/" + walletId + "/balance");
     }
-
-    // --- Payin Quotes ---
 
     public Map<String, Object> createPayinQuote(String walletId, int amount) {
         log.info("=== Creating payin quote: amount={}, wallet={} ===", amount, walletId);
@@ -154,8 +144,6 @@ public class BlindPayApiService implements BlindPayApi {
         return http.post(instanceUrl() + "/payin-quotes", body);
     }
 
-    // --- Payins ---
-
     public Map<String, Object> createPayin(String payinQuoteId) {
         log.info("=== Executing payin with quote {} ===", payinQuoteId);
         Map<String, Object> body = Map.of(
@@ -163,8 +151,6 @@ public class BlindPayApiService implements BlindPayApi {
         );
         return http.post(instanceUrl() + "/payins/evm", body);
     }
-
-    // --- Payout Quotes ---
 
     public Map<String, Object> createPayoutQuote(String bankAccountId, int amount) {
         log.info("=== Creating payout quote: amount={}, bankAccount={} ===", amount, bankAccountId);
@@ -178,8 +164,6 @@ public class BlindPayApiService implements BlindPayApi {
         return http.post(instanceUrl() + "/quotes", body);
     }
 
-    // --- Payouts ---
-
     public Map<String, Object> createPayout(String quoteId, String senderWalletAddress) {
         log.info("=== Executing payout with quote {}, sender={} ===", quoteId, senderWalletAddress);
         Map<String, Object> body = Map.of(
@@ -188,8 +172,6 @@ public class BlindPayApiService implements BlindPayApi {
         );
         return http.post(instanceUrl() + "/payouts/evm", body);
     }
-
-    // --- Transfer Quotes ---
 
     public Map<String, Object> createTransferQuote(String walletId,
                                                     String receiverWalletAddress,
@@ -207,8 +189,6 @@ public class BlindPayApiService implements BlindPayApi {
         );
         return http.post(instanceUrl() + "/transfer-quotes", body);
     }
-
-    // --- Transfers ---
 
     public Map<String, Object> createTransfer(String transferQuoteId) {
         log.info("=== Executing transfer with quote {} ===", transferQuoteId);
