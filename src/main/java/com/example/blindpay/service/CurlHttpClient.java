@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 public class CurlHttpClient {
 
     private static final String CURL_CMD = "curl";
+    private static final String GET_METHOD = "GET";
     private static final String POST_METHOD = "POST";
     private static final String AUTH_HEADER_PREFIX = "Authorization: Bearer ";
     private static final String CURL_STATUS_SUFFIX = "\n%{http_code}";
@@ -29,11 +30,11 @@ public class CurlHttpClient {
 
     public Map<String, Object> get(String url) {
         log.info("-> GET {}", url);
-        return withErrorHandling("GET", url, () -> {
-            List<String> cmd = baseCommand("GET", url);
+        return withErrorHandling(GET_METHOD, url, () -> {
+            List<String> cmd = baseCommand(GET_METHOD, url);
             addJsonAcceptHeader(cmd);
             addStatusSuffix(cmd);
-            return execute(cmd, "GET", url);
+            return execute(cmd, GET_METHOD, url);
         });
     }
 
