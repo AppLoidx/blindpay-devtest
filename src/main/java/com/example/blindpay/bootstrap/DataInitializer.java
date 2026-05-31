@@ -21,9 +21,7 @@ public class DataInitializer implements CommandLineRunner {
             return;
         }
 
-        log.info("========================================");
-        log.info("  BlindPay Test Service — Bootstrap");
-        log.info("========================================");
+        log.info("BlindPay Test Service — Bootstrap started");
 
         User alice = userRepository.save(User.builder()
                 .name("Alice Doe")
@@ -47,10 +45,8 @@ public class DataInitializer implements CommandLineRunner {
                 .tosId("to_nHelySbXX4X2")
                 .build());
 
-        log.info("  Alice: id={}, receiver={}, wallet={}", alice.getId(), alice.getReceiverId(), alice.getWalletId());
-        log.info("  Bob:   id={}, receiver={}, wallet={}", bob.getId(), bob.getReceiverId(), bob.getWalletId());
-        log.info("========================================");
-        log.info("  Bootstrap complete! Service is ready.");
-        log.info("========================================");
+        log.info("Alice: id={}, receiver={}, wallet={}", alice.getId(), alice.getReceiverId(), alice.getWalletId());
+        log.info("Bob:   id={}, receiver={}, wallet={}", bob.getId(), bob.getReceiverId(), bob.getWalletId());
+        log.info("Bootstrap complete! Service is ready.");
     }
 }

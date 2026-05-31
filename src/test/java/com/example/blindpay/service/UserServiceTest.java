@@ -95,8 +95,8 @@ class UserServiceTest {
 
         Map<String, Object> result = userService.payin(1L, 10000);
 
-        assertThat(result.get("id")).isEqualTo("pi_456");
-        assertThat(result.get("status")).isEqualTo("processing");
+        assertThat(result).containsEntry("id", "pi_456");
+        assertThat(result).containsEntry("status", "processing");
         verify(blindPayApi).createPayinQuote("bl_alice", 10000);
         verify(blindPayApi).createPayin("pq_123");
     }
@@ -111,8 +111,8 @@ class UserServiceTest {
 
         Map<String, Object> result = userService.payout(1L, 5000);
 
-        assertThat(result.get("id")).isEqualTo("po_abc");
-        assertThat(result.get("status")).isEqualTo("pending");
+        assertThat(result).containsEntry("id", "po_abc");
+        assertThat(result).containsEntry("status", "pending");
         verify(blindPayApi).createPayoutQuote("ba_alice", 5000);
         verify(blindPayApi).createPayout("qt_789", "0xalice");
     }
@@ -128,8 +128,8 @@ class UserServiceTest {
 
         Map<String, Object> result = userService.transfer(1L, 2L, 3000);
 
-        assertThat(result.get("id")).isEqualTo("tr_222");
-        assertThat(result.get("status")).isEqualTo("completed");
+        assertThat(result).containsEntry("id", "tr_222");
+        assertThat(result).containsEntry("status", "completed");
         verify(blindPayApi).createTransferQuote("bl_alice", "0xbob", 3000);
         verify(blindPayApi).createTransfer("tq_111");
     }
