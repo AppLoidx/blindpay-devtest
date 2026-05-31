@@ -1,6 +1,7 @@
+# BlindPay development instance — test keys only, no real funds
 blindpay:
-  api-key: 9rX4HcNvzJTLWxHsPeY6qc
-  instance-id: in_YsCWHso6of2F
+  api-key: 9rX4HcNvzJTLWxHsPeY6qc       # test API key (dev instance)
+  instance-id: in_YsCWHso6of2F            # test instance ID (dev)
   base-url: https://api.blindpay.com
   tos-id: to_nHelySbXX4X2
 
