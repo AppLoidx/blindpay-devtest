@@ -1,8 +1,8 @@
 blindpay:
   api-key: 9rX4HcNvzJTLWxHsPeY6qc
   instance-id: in_YsCWHso6of2F
-  base-url: https://api.blindpay.com/v1
-  tos-id: ""
+  base-url: https://api.blindpay.com
+  tos-id: to_nHelySbXX4X2
 
 spring:
   application:

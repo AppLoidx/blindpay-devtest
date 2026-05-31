@@ -32,7 +32,7 @@ public class UserService {
 
         log.info("Step 1: Creating payin quote...");
         Map<String, Object> quote = blindPayApi.createPayinQuote(
-                user.getWalletId(), amount, "ach", "usdb");
+                user.getWalletId(), amount);
         String quoteId = (String) quote.get("id");
         log.info("Payin quote created: {}", quoteId);
 
@@ -64,7 +64,7 @@ public class UserService {
     public Map<String, Object> getBalance(Long userId) {
         User user = getUser(userId);
         log.info("=== BALANCE: user={} ({}) ===", user.getName(), userId);
-        return blindPayApi.getWallet(user.getWalletId());
+        return blindPayApi.getWallet(user.getReceiverId(), user.getWalletId());
     }
 
     public Map<String, Object> transfer(Long fromUserId, Long toUserId, int amount) {

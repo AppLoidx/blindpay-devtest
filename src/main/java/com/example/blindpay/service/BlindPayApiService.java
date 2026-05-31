@@ -5,32 +5,39 @@ import com.example.blindpay.exception.BlindPayApiException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientResponseException;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
 public class BlindPayApiService {
 
-    private final RestClient restClient;
     private final BlindPayProperties properties;
     private final ObjectMapper objectMapper;
 
-    public BlindPayApiService(RestClient blindPayRestClient,
-                              BlindPayProperties properties,
+    public BlindPayApiService(BlindPayProperties properties,
                               ObjectMapper objectMapper) {
-        this.restClient = blindPayRestClient;
         this.properties = properties;
         this.objectMapper = objectMapper;
     }
 
     private String instancePath() {
-        return "/instances/" + properties.getInstanceId();
+        return "/v1/instances/" + properties.getInstanceId();
+    }
+
+    private String eInstancePath() {
+        return "/v1/e/instances/" + properties.getInstanceId();
+    }
+
+    private String baseUrl() {
+        return properties.getBaseUrl();
     }
 
     // --- TOS ---
@@ -41,79 +48,102 @@ public class BlindPayApiService {
                 "idempotency_key", UUID.randomUUID().toString(),
                 "redirect_url", redirectUrl
         );
-        return post(instancePath() + "/tos", body);
+        return post(eInstancePath() + "/tos", body);
+    }
+
+    // --- Upload (for KYC files) ---
+
+    public String uploadFile(String filePath) {
+        log.info("=== Uploading file: {} ===", filePath);
+        return uploadForm("/v1/upload", filePath, "onboarding");
     }
 
     // --- Receivers ---
 
     public Map<String, Object> createReceiver(String firstName, String lastName,
-                                               String email, String tosId) {
+                                               String email, String tosId,
+                                               String selfieFileUrl, String idDocFrontFileUrl) {
         log.info("=== Creating receiver: {} {} ===", firstName, lastName);
-        Map<String, Object> body = Map.of(
-                "first_name", firstName,
-                "last_name", lastName,
-                "email", email,
-                "tos_id", tosId
-        );
+        Map<String, Object> body = new HashMap<>();
+        body.put("first_name", firstName);
+        body.put("last_name", lastName);
+        body.put("email", email);
+        body.put("type", "individual");
+        body.put("kyc_type", "standard");
+        body.put("country", "US");
+        body.put("tax_id", "123456789");
+        body.put("address_line_1", "123 Main St");
+        body.put("city", "New York");
+        body.put("state_province_region", "NY");
+        body.put("postal_code", "10001");
+        body.put("date_of_birth", "1990-01-01T00:00:00.000Z");
+        body.put("id_doc_country", "US");
+        body.put("id_doc_type", "PASSPORT");
+        body.put("selfie_file", selfieFileUrl);
+        body.put("id_doc_front_file", idDocFrontFileUrl);
+        body.put("tos_id", tosId);
         return post(instancePath() + "/receivers", body);
     }
 
-    // --- Bank Accounts ---
+    public Map<String, Object> getReceiver(String receiverId) {
+        log.info("=== Getting receiver {} ===", receiverId);
+        return get(instancePath() + "/receivers/" + receiverId);
+    }
+
+    // --- Bank Accounts (PIX for dev simplicity) ---
 
     public Map<String, Object> createBankAccount(String receiverId,
-                                                  String beneficiaryName,
-                                                  String routingNumber,
-                                                  String accountNumber) {
-        log.info("=== Creating ACH bank account for receiver {} ===", receiverId);
+                                                  String name, String pixKey) {
+        log.info("=== Creating PIX bank account for receiver {} ===", receiverId);
         Map<String, Object> body = Map.of(
-                "receiver_id", receiverId,
-                "payment_rail", "ach",
-                "beneficiary_name", beneficiaryName,
-                "routing_number", routingNumber,
-                "account_number", accountNumber
+                "type", "pix",
+                "name", name,
+                "pix_key", pixKey
         );
-        return post(instancePath() + "/bank-accounts", body);
+        return post(instancePath() + "/receivers/" + receiverId + "/bank-accounts", body);
     }
 
     // --- Blockchain Wallets ---
 
     public Map<String, Object> createBlockchainWallet(String receiverId,
+                                                       String name,
                                                        String walletAddress) {
-        log.info("=== Creating blockchain wallet for receiver {} on Base Sepolia ===", receiverId);
+        log.info("=== Creating blockchain wallet for receiver {} on polygon_amoy ===", receiverId);
         Map<String, Object> body = Map.of(
-                "receiver_id", receiverId,
+                "name", name,
+                "network", "polygon_amoy",
                 "address", walletAddress,
-                "chain_id", 84532,
                 "is_account_abstraction", true
         );
-        return post(instancePath() + "/blockchain-wallets", body);
+        return post(instancePath() + "/receivers/" + receiverId + "/blockchain-wallets", body);
     }
 
     // --- Managed Wallets ---
 
-    public Map<String, Object> createWallet(String receiverId) {
+    public Map<String, Object> createWallet(String receiverId, String name) {
         log.info("=== Creating managed wallet for receiver {} ===", receiverId);
         Map<String, Object> body = Map.of(
-                "receiver_id", receiverId
+                "network", "polygon_amoy",
+                "name", name
         );
-        return post(instancePath() + "/wallets", body);
+        return post(instancePath() + "/receivers/" + receiverId + "/wallets", body);
     }
 
-    public Map<String, Object> getWallet(String walletId) {
-        log.info("=== Getting wallet balance for {} ===", walletId);
-        return get(instancePath() + "/wallets/" + walletId);
+    public Map<String, Object> getWallet(String receiverId, String walletId) {
+        log.info("=== Getting wallet {} for receiver {} ===", walletId, receiverId);
+        return get(instancePath() + "/receivers/" + receiverId + "/wallets/" + walletId);
     }
 
     // --- Payin Quotes ---
 
-    public Map<String, Object> createPayinQuote(String walletId, int amount,
-                                                 String paymentMethod, String stablecoin) {
+    public Map<String, Object> createPayinQuote(String walletId, int amount) {
         log.info("=== Creating payin quote: amount={}, wallet={} ===", amount, walletId);
         Map<String, Object> body = Map.of(
                 "wallet_id", walletId,
-                "amount", amount,
-                "payment_method", paymentMethod,
-                "stablecoin", stablecoin
+                "request_amount", amount,
+                "currency_type", "receiver",
+                "payment_method", "pix",
+                "token", "USDB"
         );
         return post(instancePath() + "/payin-quotes", body);
     }
@@ -134,7 +164,10 @@ public class BlindPayApiService {
         log.info("=== Creating payout quote: amount={}, bankAccount={} ===", amount, bankAccountId);
         Map<String, Object> body = Map.of(
                 "bank_account_id", bankAccountId,
-                "amount", amount
+                "request_amount", amount,
+                "currency_type", "sender",
+                "network", "polygon_amoy",
+                "token", "USDB"
         );
         return post(instancePath() + "/quotes", body);
     }
@@ -175,58 +208,138 @@ public class BlindPayApiService {
         return post(instancePath() + "/transfers", body);
     }
 
-    // --- Generic POST helper ---
+    // --- HTTP helpers using curl (Cloudflare blocks Java HTTP clients via TLS fingerprinting) ---
 
     private Map<String, Object> get(String path) {
+        String url = baseUrl() + path;
+        log.info("-> GET {}", url);
+
         try {
-            log.info("-> GET {}", path);
+            List<String> command = new ArrayList<>();
+            command.add("curl");
+            command.add("-s");
+            command.add("-X");
+            command.add("GET");
+            command.add(url);
+            command.add("-H");
+            command.add("Authorization: Bearer " + properties.getApiKey());
+            command.add("-H");
+            command.add("Accept: application/json");
+            command.add("-w");
+            command.add("\n%{http_code}");
 
-            String responseJson = restClient.get()
-                    .uri(path)
-                    .retrieve()
-                    .body(String.class);
+            ProcessBuilder pb = new ProcessBuilder(command);
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+            String output = new String(process.getInputStream().readAllBytes());
+            process.waitFor(30, TimeUnit.SECONDS);
 
-            log.info("<- GET {} | response: {}", path, responseJson);
-
-            Map<String, Object> result = objectMapper.readValue(
-                    responseJson, new TypeReference<>() {});
-            return result;
-        } catch (RestClientResponseException ex) {
-            log.error("BlindPay API error on GET {}: {} — {}",
-                    path, ex.getStatusCode(), ex.getResponseBodyAsString());
-            throw new BlindPayApiException(
-                    ex.getStatusCode().value(), ex.getResponseBodyAsString());
+            return parseResponse("GET", url, output);
+        } catch (BlindPayApiException ex) {
+            throw ex;
         } catch (Exception ex) {
-            log.error("Error calling BlindPay API GET {}: {}", path, ex.getMessage(), ex);
-            throw new RuntimeException("Failed to call BlindPay API: " + path, ex);
+            log.error("Error calling BlindPay API GET {}: {}", url, ex.getMessage(), ex);
+            throw new RuntimeException("Failed to call BlindPay API: " + url, ex);
         }
     }
 
     private Map<String, Object> post(String path, Map<String, Object> body) {
+        String url = baseUrl() + path;
+
         try {
             String requestJson = objectMapper.writeValueAsString(body);
-            log.info("-> POST {} | body: {}", path, requestJson);
+            log.info("-> POST {} | body: {}", url, requestJson);
 
-            String responseJson = restClient.post()
-                    .uri(path)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(body)
-                    .retrieve()
-                    .body(String.class);
+            List<String> command = new ArrayList<>();
+            command.add("curl");
+            command.add("-s");
+            command.add("-X");
+            command.add("POST");
+            command.add(url);
+            command.add("-H");
+            command.add("Authorization: Bearer " + properties.getApiKey());
+            command.add("-H");
+            command.add("Content-Type: application/json");
+            command.add("-H");
+            command.add("Accept: application/json");
+            command.add("-d");
+            command.add(requestJson);
+            command.add("-w");
+            command.add("\n%{http_code}");
 
-            log.info("<- POST {} | response: {}", path, responseJson);
+            ProcessBuilder pb = new ProcessBuilder(command);
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+            String output = new String(process.getInputStream().readAllBytes());
+            process.waitFor(30, TimeUnit.SECONDS);
 
-            Map<String, Object> result = objectMapper.readValue(
-                    responseJson, new TypeReference<>() {});
-            return result;
-        } catch (RestClientResponseException ex) {
-            log.error("BlindPay API error on POST {}: {} — {}",
-                    path, ex.getStatusCode(), ex.getResponseBodyAsString());
-            throw new BlindPayApiException(
-                    ex.getStatusCode().value(), ex.getResponseBodyAsString());
+            return parseResponse("POST", url, output);
+        } catch (BlindPayApiException ex) {
+            throw ex;
         } catch (Exception ex) {
-            log.error("Error calling BlindPay API POST {}: {}", path, ex.getMessage(), ex);
-            throw new RuntimeException("Failed to call BlindPay API: " + path, ex);
+            log.error("Error calling BlindPay API POST {}: {}", url, ex.getMessage(), ex);
+            throw new RuntimeException("Failed to call BlindPay API: " + url, ex);
         }
+    }
+
+    private String uploadForm(String path, String filePath, String bucket) {
+        String url = baseUrl() + path;
+        log.info("-> UPLOAD {} | file: {}, bucket: {}", url, filePath, bucket);
+
+        try {
+            List<String> command = new ArrayList<>();
+            command.add("curl");
+            command.add("-s");
+            command.add("-X");
+            command.add("POST");
+            command.add(url);
+            command.add("-H");
+            command.add("Authorization: Bearer " + properties.getApiKey());
+            command.add("-F");
+            command.add("file=@" + filePath);
+            command.add("-F");
+            command.add("bucket=" + bucket);
+            command.add("-w");
+            command.add("\n%{http_code}");
+
+            ProcessBuilder pb = new ProcessBuilder(command);
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+            String output = new String(process.getInputStream().readAllBytes());
+            process.waitFor(30, TimeUnit.SECONDS);
+
+            Map<String, Object> result = parseResponse("UPLOAD", url, output);
+            String fileUrl = (String) result.get("file_url");
+            log.info("<- Uploaded file URL: {}", fileUrl);
+            return fileUrl;
+        } catch (BlindPayApiException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error("Error uploading to BlindPay API {}: {}", url, ex.getMessage(), ex);
+            throw new RuntimeException("Failed to upload to BlindPay API: " + url, ex);
+        }
+    }
+
+    private Map<String, Object> parseResponse(String method, String url, String output)
+            throws IOException {
+        String[] lines = output.split("\n");
+        String statusLine = lines[lines.length - 1].trim();
+        String responseBody = output.substring(0, output.lastIndexOf("\n")).trim();
+
+        int statusCode;
+        try {
+            statusCode = Integer.parseInt(statusLine);
+        } catch (NumberFormatException e) {
+            log.error("<- {} {} | failed to parse response: {}", method, url, output);
+            throw new RuntimeException("Failed to parse curl response for " + url);
+        }
+
+        log.info("<- {} {} | status: {} | response: {}", method, url, statusCode, responseBody);
+
+        if (statusCode >= 400) {
+            throw new BlindPayApiException(statusCode, responseBody);
+        }
+
+        return objectMapper.readValue(responseBody, new TypeReference<>() {});
     }
 }
