@@ -48,6 +48,11 @@
             <groupId>org.apache.httpcomponents.client5</groupId>
             <artifactId>httpclient5</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -62,6 +67,31 @@
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-maven</artifactId>
+                <version>1.17.4</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.pitest</groupId>
+                        <artifactId>pitest-junit5-plugin</artifactId>
+                        <version>1.2.1</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <targetClasses>
+                        <param>com.example.blindpay.service.*</param>
+                        <param>com.example.blindpay.controller.*</param>
+                        <param>com.example.blindpay.exception.*</param>
+                    </targetClasses>
+                    <targetTests>
+                        <param>com.example.blindpay.*</param>
+                    </targetTests>
+                    <outputFormats>
+                        <param>HTML</param>
+                    </outputFormats>
                 </configuration>
             </plugin>
         </plugins>
