@@ -99,6 +99,11 @@ public class BlindPayApiService {
         return post(instancePath() + "/wallets", body);
     }
 
+    public Map<String, Object> getWallet(String walletId) {
+        log.info("=== Getting wallet balance for {} ===", walletId);
+        return get(instancePath() + "/wallets/" + walletId);
+    }
+
     // --- Payin Quotes ---
 
     public Map<String, Object> createPayinQuote(String walletId, int amount,
@@ -171,6 +176,31 @@ public class BlindPayApiService {
     }
 
     // --- Generic POST helper ---
+
+    private Map<String, Object> get(String path) {
+        try {
+            log.info("-> GET {}", path);
+
+            String responseJson = restClient.get()
+                    .uri(path)
+                    .retrieve()
+                    .body(String.class);
+
+            log.info("<- GET {} | response: {}", path, responseJson);
+
+            Map<String, Object> result = objectMapper.readValue(
+                    responseJson, new TypeReference<>() {});
+            return result;
+        } catch (RestClientResponseException ex) {
+            log.error("BlindPay API error on GET {}: {} — {}",
+                    path, ex.getStatusCode(), ex.getResponseBodyAsString());
+            throw new BlindPayApiException(
+                    ex.getStatusCode().value(), ex.getResponseBodyAsString());
+        } catch (Exception ex) {
+            log.error("Error calling BlindPay API GET {}: {}", path, ex.getMessage(), ex);
+            throw new RuntimeException("Failed to call BlindPay API: " + path, ex);
+        }
+    }
 
     private Map<String, Object> post(String path, Map<String, Object> body) {
         try {

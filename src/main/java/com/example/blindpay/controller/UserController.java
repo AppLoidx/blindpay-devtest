@@ -2,7 +2,6 @@ package com.example.blindpay.controller;
 
 import com.example.blindpay.dto.PayinRequest;
 import com.example.blindpay.dto.PayoutRequest;
-import com.example.blindpay.dto.TransferRequest;
 import com.example.blindpay.model.User;
 import com.example.blindpay.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +36,12 @@ public class UserController {
         return userService.getUser(id);
     }
 
+    @GetMapping("/{id}/balance")
+    public Map<String, Object> getBalance(@PathVariable Long id) {
+        log.info("GET /api/users/{}/balance", id);
+        return userService.getBalance(id);
+    }
+
     @PostMapping("/{id}/payin")
     public Map<String, Object> payin(@PathVariable Long id,
                                      @RequestBody PayinRequest request) {
@@ -51,11 +56,4 @@ public class UserController {
         return userService.payout(id, request.getAmount());
     }
 
-    @PostMapping("/transfer")
-    public Map<String, Object> transfer(@RequestBody TransferRequest request) {
-        log.info("POST /api/users/transfer — from: {}, to: {}, amount: {}",
-                request.getFromUserId(), request.getToUserId(), request.getAmount());
-        return userService.transfer(
-                request.getFromUserId(), request.getToUserId(), request.getAmount());
-    }
 }
