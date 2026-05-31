@@ -19,6 +19,8 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class CurlHttpClient {
 
+    private static final String CURL_CMD = "curl";
+    private static final String POST_METHOD = "POST";
     private static final String AUTH_HEADER_PREFIX = "Authorization: Bearer ";
     private static final String CURL_STATUS_SUFFIX = "\n%{http_code}";
 
@@ -30,7 +32,7 @@ public class CurlHttpClient {
 
         try {
             List<String> command = new ArrayList<>();
-            command.add("curl");
+            command.add(CURL_CMD);
             command.add("-s");
             command.add("-X");
             command.add("GET");
@@ -60,10 +62,10 @@ public class CurlHttpClient {
             log.info("-> POST {} | body: {}", url, requestJson);
 
             List<String> command = new ArrayList<>();
-            command.add("curl");
+            command.add(CURL_CMD);
             command.add("-s");
             command.add("-X");
-            command.add("POST");
+            command.add(POST_METHOD);
             command.add(url);
             command.add("-H");
             command.add(AUTH_HEADER_PREFIX + properties.getApiKey());
@@ -93,10 +95,10 @@ public class CurlHttpClient {
 
         try {
             List<String> command = new ArrayList<>();
-            command.add("curl");
+            command.add(CURL_CMD);
             command.add("-s");
             command.add("-X");
-            command.add("POST");
+            command.add(POST_METHOD);
             command.add(url);
             command.add("-H");
             command.add(AUTH_HEADER_PREFIX + properties.getApiKey());

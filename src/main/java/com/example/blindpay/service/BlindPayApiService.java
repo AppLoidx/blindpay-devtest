@@ -12,12 +12,19 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("PMD.TooManyMethods") // [NEEDS-REFACTOR] 16 methods map to distinct API endpoints
 public class BlindPayApiService implements BlindPayApi {
+
+    // [NEEDS-REFACTOR] TooManyMethods: class has 16 public methods (max 15).
+    // Each method maps to a distinct BlindPay API endpoint — splitting requires
+    // grouping by domain (payin, payout, transfer, receiver) into sub-services.
 
     private static final String NETWORK = "polygon_amoy";
     private static final String NETWORK_KEY = "network";
     private static final String RECEIVERS_PATH = "/receivers/";
     private static final String REQUEST_AMOUNT = "request_amount";
+    private static final String NAME_KEY = "name";
+    private static final String TOKEN_USDB = "USDB";
 
     private final BlindPayProperties properties;
     private final CurlHttpClient http;
@@ -91,7 +98,7 @@ public class BlindPayApiService implements BlindPayApi {
         log.info("=== Creating PIX bank account for receiver {} ===", receiverId);
         Map<String, Object> body = Map.of(
                 "type", "pix",
-                "name", name,
+                NAME_KEY, name,
                 "pix_key", pixKey
         );
         return http.post(receiverUrl(receiverId) + "/bank-accounts", body);
@@ -104,7 +111,7 @@ public class BlindPayApiService implements BlindPayApi {
                                                        String walletAddress) {
         log.info("=== Creating blockchain wallet for receiver {} on polygon_amoy ===", receiverId);
         Map<String, Object> body = Map.of(
-                "name", name,
+                NAME_KEY, name,
                 NETWORK_KEY, NETWORK,
                 "address", walletAddress,
                 "is_account_abstraction", true
@@ -118,7 +125,7 @@ public class BlindPayApiService implements BlindPayApi {
         log.info("=== Creating managed wallet for receiver {} ===", receiverId);
         Map<String, Object> body = Map.of(
                 NETWORK_KEY, NETWORK,
-                "name", name
+                NAME_KEY, name
         );
         return http.post(receiverUrl(receiverId) + "/wallets", body);
     }
@@ -142,7 +149,7 @@ public class BlindPayApiService implements BlindPayApi {
                 REQUEST_AMOUNT, amount,
                 "currency_type", "receiver",
                 "payment_method", "pix",
-                "token", "USDB"
+                "token", TOKEN_USDB
         );
         return http.post(instanceUrl() + "/payin-quotes", body);
     }
@@ -166,7 +173,7 @@ public class BlindPayApiService implements BlindPayApi {
                 REQUEST_AMOUNT, amount,
                 "currency_type", "sender",
                 NETWORK_KEY, NETWORK,
-                "token", "USDB"
+                "token", TOKEN_USDB
         );
         return http.post(instanceUrl() + "/quotes", body);
     }
@@ -194,8 +201,8 @@ public class BlindPayApiService implements BlindPayApi {
                 "receiver_wallet_address", receiverWalletAddress,
                 REQUEST_AMOUNT, amount,
                 "amount_reference", "sender",
-                "sender_token", "USDB",
-                "receiver_token", "USDB",
+                "sender_token", TOKEN_USDB,
+                "receiver_token", TOKEN_USDB,
                 "receiver_network", NETWORK
         );
         return http.post(instanceUrl() + "/transfer-quotes", body);
