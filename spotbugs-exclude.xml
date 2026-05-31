@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter
+        xmlns="https://github.com/spotbugs/spotbugs/blob/master/spotbugs/etc/findbugsfilter.xsd"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="https://github.com/spotbugs/spotbugs/blob/master/spotbugs/etc/findbugsfilter.xsd">
+
+    <!-- Exclude Spring Boot application class -->
+    <Match>
+        <Class name="com.example.blindpay.BlindpayTestApplication"/>
+    </Match>
+
+    <!-- Exclude EI_EXPOSE_REP2 on Lombok @RequiredArgsConstructor generated constructors.
+         These are Spring-managed beans — constructor args come from the container, not user input. -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- Exclude COMMAND_INJECTION on CurlHttpClient and BlindPayApiService.
+         curl/ProcessBuilder usage is BY DESIGN — Cloudflare blocks Java HTTP clients.
+         Arguments are constructed internally, not from user input. -->
+    <Match>
+        <Bug pattern="COMMAND_INJECTION"/>
+        <Or>
+            <Class name="com.example.blindpay.service.CurlHttpClient"/>
+            <Class name="com.example.blindpay.service.BlindPayApiService"/>
+        </Or>
+    </Match>
+
+    <!-- Exclude CRLF_INJECTION_LOGS — log parameters come from internal state
+         (user IDs, amounts), not from untrusted external input. -->
+    <Match>
+        <Bug pattern="CRLF_INJECTION_LOGS"/>
+    </Match>
+
+    <!-- Categories to DISABLE (not relevant for this project) -->
+    <Match>
+        <Bug category="STYLE"/>
+    </Match>
+    <Match>
+        <Bug category="I18N"/>
+    </Match>
+    <Match>
+        <Bug category="EXPERIMENTAL"/>
+    </Match>
+
+</FindBugsFilter>

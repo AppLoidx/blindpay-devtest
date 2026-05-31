@@ -1,0 +1,134 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+        "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+        "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<!--
+    Based on Google Java Style with project-specific overrides.
+    See: https://checkstyle.sourceforge.io/google_style.html
+-->
+<module name="Checker">
+    <property name="charset" value="UTF-8"/>
+    <property name="severity" value="error"/>
+    <property name="fileExtensions" value="java"/>
+
+    <!-- Suppress checks on generated/test code -->
+    <module name="SuppressionFilter">
+        <property name="file" value="${config_loc}/checkstyle-suppressions.xml" default="checkstyle-suppressions.xml"/>
+        <property name="optional" value="true"/>
+    </module>
+
+    <!-- No tab characters -->
+    <module name="FileTabCharacter">
+        <property name="eachLine" value="true"/>
+    </module>
+
+    <!-- File length -->
+    <module name="FileLength">
+        <property name="max" value="200"/>
+    </module>
+
+    <!-- Line length (Google default: 100) -->
+    <module name="LineLength">
+        <property name="max" value="120"/>
+        <property name="ignorePattern" value="^package.*|^import.*|a]? href|href|http://|https://|ftp://"/>
+    </module>
+
+    <module name="TreeWalker">
+        <!-- ==================== Naming ==================== -->
+
+        <!-- General naming conventions from Google style -->
+        <module name="PackageName">
+            <property name="format" value="^[a-z]+(\.[a-z][a-z0-9]*)*$"/>
+        </module>
+        <module name="TypeName"/>
+        <module name="MemberName">
+            <property name="format" value="^[a-z][a-zA-Z0-9]*$"/>
+        </module>
+        <module name="ParameterName">
+            <property name="format" value="^[a-z][a-zA-Z0-9]*$"/>
+        </module>
+        <module name="LocalVariableName">
+            <property name="format" value="^[a-z][a-zA-Z0-9]*$"/>
+        </module>
+        <module name="MethodName">
+            <property name="format" value="^[a-z][a-zA-Z0-9]*$"/>
+        </module>
+        <module name="ConstantName"/>
+
+        <!-- Controller/Service/Repository naming enforcement -->
+        <!-- Note: Checkstyle TypeName doesn't support suffix-by-package.
+             These rules are enforced by ArchUnit instead. -->
+
+        <!-- ==================== Imports ==================== -->
+
+        <!-- No wildcard imports -->
+        <module name="AvoidStarImport">
+            <property name="allowStaticMemberImports" value="false"/>
+        </module>
+        <module name="RedundantImport"/>
+        <module name="UnusedImports"/>
+
+        <!-- ==================== Size limits ==================== -->
+
+        <!-- Max method length: 20 lines -->
+        <module name="MethodLength">
+            <property name="max" value="20"/>
+            <property name="countEmpty" value="false"/>
+        </module>
+
+        <!-- Max parameters -->
+        <module name="ParameterNumber">
+            <property name="max" value="7"/>
+        </module>
+
+        <!-- ==================== Coding ==================== -->
+
+        <!-- No empty blocks -->
+        <module name="EmptyBlock">
+            <property name="option" value="TEXT"/>
+        </module>
+
+        <!-- Braces required -->
+        <module name="NeedBraces"/>
+
+        <!-- No fall-through in switch -->
+        <module name="FallThrough"/>
+
+        <!-- Equals/hashCode consistency -->
+        <module name="EqualsHashCode"/>
+
+        <!-- No finalize -->
+        <module name="NoFinalizer"/>
+
+        <!-- One statement per line -->
+        <module name="OneStatementPerLine"/>
+
+        <!-- Modifier order -->
+        <module name="ModifierOrder"/>
+
+        <!-- ==================== Whitespace (Google style) ==================== -->
+
+        <module name="WhitespaceAround">
+            <property name="allowEmptyConstructors" value="true"/>
+            <property name="allowEmptyMethods" value="true"/>
+            <property name="allowEmptyTypes" value="true"/>
+            <property name="allowEmptyLoops" value="true"/>
+        </module>
+        <module name="GenericWhitespace"/>
+        <module name="NoWhitespaceBefore"/>
+
+        <!-- ==================== Commented-out code ==================== -->
+        <!-- Checkstyle doesn't have a native "no commented-out code" check.
+             PMD's CommentedOutCode rule handles this instead. -->
+
+        <!-- ==================== Annotations ==================== -->
+        <module name="AnnotationLocation">
+            <property name="allowSamelineMultipleAnnotations" value="false"/>
+        </module>
+
+        <!-- ==================== Javadoc (relaxed for test project) ==================== -->
+        <!-- Intentionally omitted — this is a test/experiment project -->
+
+    </module>
+</module>
