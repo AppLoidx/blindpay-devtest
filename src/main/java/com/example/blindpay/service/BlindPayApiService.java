@@ -198,7 +198,11 @@ public class BlindPayApiService {
         Map<String, Object> body = Map.of(
                 "wallet_id", walletId,
                 "receiver_wallet_address", receiverWalletAddress,
-                "amount", amount
+                "request_amount", amount,
+                "amount_reference", "sender",
+                "sender_token", "USDB",
+                "receiver_token", "USDB",
+                "receiver_network", "polygon_amoy"
         );
         return post(instancePath() + "/transfer-quotes", body);
     }
