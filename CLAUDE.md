@@ -20,14 +20,19 @@ Controller → Service → BlindPayApiService (curl) → BlindPay API. No auth l
 - Spring Web, Spring Data JPA, H2 (in-memory, runtime)
 - Lombok, Jackson, httpclient5 (unused dep from earlier iteration)
 - Testing: JUnit 5, Mockito, MockMvc, PITest 1.17.4
+- Static analysis: ArchUnit 1.3.0, Checkstyle 10.21.4, PMD 7.3.0, SpotBugs 4.8.6.6 (FindSecBugs 1.13.0)
 - No auth, no Spring Security, no profiles
 
 ## Critical Commands
 
 ```bash
 mvn spring-boot:run                                          # Start on :8080
-mvn test                                                     # 15 unit tests
+mvn test                                                     # 27 tests (15 unit + 12 ArchUnit)
+mvn verify                                                   # Full build + static analysis
 mvn test-compile org.pitest:pitest-maven:mutationCoverage    # Mutation report → target/pit-reports/*/index.html
+mvn checkstyle:check                                         # Checkstyle only
+mvn pmd:check                                                # PMD only
+mvn spotbugs:check                                           # SpotBugs only
 ```
 
 - UI: http://localhost:8080/index.html
@@ -52,6 +57,66 @@ mvn test-compile org.pitest:pitest-maven:mutationCoverage    # Mutation report �
 - **Network is polygon_amoy**, not base_sepolia (disabled for managed wallets). Payment rail is PIX, not ACH.
 - **Dev payins may not auto-complete** — PIX payins on dev can stay in `processing` indefinitely.
 - **httpclient5 dependency is unused** — leftover from an earlier attempt to bypass Cloudflare. Safe to remove.
+
+## Code Rules
+
+All rules are enforced at build time. `mvn verify` runs every check. Violations fail the build.
+
+### ArchUnit (12 rules, run during test phase)
+
+| Rule | What it checks |
+|------|---------------|
+| Controllers must not access Repositories directly | Package dependency: `..controller..` → `..repository..` |
+| Controllers must not be annotated with @Service | Annotation check on controller classes |
+| @Transactional must not be on Controllers or Repositories | Annotation check on controller/repository classes and methods |
+| JPA @Entity must not appear in Controller dependencies | Dependency check: controllers → @Entity-annotated classes |
+| Service classes must implement interfaces | Interface implementation check in `..service..` package |
+| No @Autowired on fields (constructor injection only) | Field annotation check across all classes |
+| Controllers must be annotated @RestController/@Controller | Annotation presence in `..controller..` package |
+| Repositories must extend JpaRepository/CrudRepository | Type hierarchy check in `..repository..` package |
+| Single Responsibility (max 8 project class dependencies) | Dependency count per class |
+| service.impl classes must implement service interface | Package-to-interface enforcement |
+
+### Checkstyle (Google style base, verify phase)
+
+| Rule | Limit |
+|------|-------|
+| Max method length | 20 lines |
+| Max file length | 200 lines |
+| Max line length | 120 characters |
+| No wildcard imports | AvoidStarImport |
+| No tab characters | FileTabCharacter |
+
+### PMD (verify phase)
+
+| Rule | Limit |
+|------|-------|
+| No empty catch blocks | EmptyCatchBlock |
+| No God classes | GodClass |
+| No dead code | UnusedPrivateField, UnusedPrivateMethod, UnusedLocalVariable |
+| No System.out.println | SystemPrintln |
+| Cyclomatic complexity | max 10 per method |
+| No duplicate string literals | max 3 occurrences |
+| Max methods per class | 15 |
+| Max fields per class | 10 |
+
+### SpotBugs + FindSecBugs (verify phase)
+
+Enabled categories: CORRECTNESS, BAD_PRACTICE, PERFORMANCE, SECURITY. Threshold: MEDIUM.
+
+Suppressed false positives:
+- COMMAND_INJECTION — curl/ProcessBuilder usage is by design (Cloudflare blocks Java HTTP clients)
+- CRLF_INJECTION_LOGS — log parameters are internal state, not user input
+- EI_EXPOSE_REP2 — Lombok-generated constructors in Spring-managed beans
+
+ErrorProne was evaluated and removed — incompatible with Lombok on Java 21 (crashes on generated code). SpotBugs covers similar bug categories.
+
+### Config files
+
+- `checkstyle.xml` — Checkstyle ruleset (repo root)
+- `pmd-rules.xml` — PMD ruleset (repo root)
+- `spotbugs-exclude.xml` — SpotBugs exclusion filter (repo root)
+- `src/test/java/com/example/blindpay/architecture/ArchitectureTest.java` — ArchUnit rules
 
 ## Out of Scope
 
