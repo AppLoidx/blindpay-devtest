@@ -133,6 +133,13 @@ Design specs and implementation plans:
 - `docs/superpowers/plans/2026-05-31-blindpay-test-service.md`
 - `docs/superpowers/plans/2026-05-31-tests-ui-pitest.md`
 
+## Dev Setup
+
+- LSP: jdtls via Mason (already installed at `~/.local/share/nvim/mason/packages/jdtls/`)
+- Lombok jar bundled — symbol navigation works for generated code
+- See `.claude/lsp-setup.md` for troubleshooting
+- Note: jdtls is not exposed as a Claude Code tool — Claude uses Grep/Glob for navigation
+
 ## Codebase Map
 
 ```
