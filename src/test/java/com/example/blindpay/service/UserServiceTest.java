@@ -137,12 +137,12 @@ class UserServiceTest {
     @Test
     void getBalance_callsGetWalletWithCorrectIds() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(alice));
-        when(blindPayApi.getWallet("re_alice", "bl_alice"))
-                .thenReturn(Map.of("id", "bl_alice", "address", "0xalice"));
+        when(blindPayApi.getWalletBalance("re_alice", "bl_alice"))
+                .thenReturn(Map.of("USDB", Map.of("symbol", "USDB", "amount", 0)));
 
         Map<String, Object> result = userService.getBalance(1L);
 
-        assertThat(result.get("id")).isEqualTo("bl_alice");
-        verify(blindPayApi).getWallet("re_alice", "bl_alice");
+        assertThat(result).containsKey("USDB");
+        verify(blindPayApi).getWalletBalance("re_alice", "bl_alice");
     }
 }

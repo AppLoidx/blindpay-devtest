@@ -134,6 +134,11 @@ public class BlindPayApiService {
         return get(instancePath() + "/receivers/" + receiverId + "/wallets/" + walletId);
     }
 
+    public Map<String, Object> getWalletBalance(String receiverId, String walletId) {
+        log.info("=== Getting wallet balance {} for receiver {} ===", walletId, receiverId);
+        return get(instancePath() + "/receivers/" + receiverId + "/wallets/" + walletId + "/balance");
+    }
+
     // --- Payin Quotes ---
 
     public Map<String, Object> createPayinQuote(String walletId, int amount) {

@@ -64,7 +64,7 @@ public class UserService {
     public Map<String, Object> getBalance(Long userId) {
         User user = getUser(userId);
         log.info("=== BALANCE: user={} ({}) ===", user.getName(), userId);
-        return blindPayApi.getWallet(user.getReceiverId(), user.getWalletId());
+        return blindPayApi.getWalletBalance(user.getReceiverId(), user.getWalletId());
     }
 
     public Map<String, Object> transfer(Long fromUserId, Long toUserId, int amount) {
