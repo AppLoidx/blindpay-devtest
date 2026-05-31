@@ -1,6 +1,6 @@
 package com.example.blindpay.controller;
 
-import com.example.blindpay.repository.UserRepository;
+import com.example.blindpay.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,11 +13,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SetupController {
 
-    private final UserRepository userRepository;
+    private final UserService userService;
 
     @GetMapping("/")
     public Map<String, Object> status() {
-        long count = userRepository.count();
+        long count = userService.getUserCount();
         if (count > 0) {
             return Map.of("status", "ready", "users", count,
                     "message", "Service is running. Use /api/users endpoints.");

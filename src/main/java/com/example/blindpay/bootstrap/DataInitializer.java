@@ -20,10 +20,16 @@ public class DataInitializer implements CommandLineRunner {
             log.info("Users already exist, skipping bootstrap.");
             return;
         }
-
         log.info("BlindPay Test Service — Bootstrap started");
+        User alice = userRepository.save(createAlice());
+        User bob = userRepository.save(createBob());
+        logUser("Alice", alice);
+        logUser("Bob  ", bob);
+        log.info("Bootstrap complete! Service is ready.");
+    }
 
-        User alice = userRepository.save(User.builder()
+    private User createAlice() {
+        return User.builder()
                 .name("Alice Doe")
                 .email("alice@example.com")
                 .receiverId("re_6qxogYN4CPcO")
@@ -32,9 +38,11 @@ public class DataInitializer implements CommandLineRunner {
                 .walletAddress("0x3734cd5c558b785866ed4c2e0757ac5cef0ccbc6")
                 .blockchainWalletId("bw_HGrABaPN74zg")
                 .tosId("to_jZGTqFxWn30Z")
-                .build());
+                .build();
+    }
 
-        User bob = userRepository.save(User.builder()
+    private User createBob() {
+        return User.builder()
                 .name("Bob Smith")
                 .email("bob@example.com")
                 .receiverId("re_EetWHy6Ry77V")
@@ -43,10 +51,11 @@ public class DataInitializer implements CommandLineRunner {
                 .walletAddress("0xe19beab0417c4ca1cbb4e17c69b80fcc739eb7e1")
                 .blockchainWalletId("bw_DzRpvayE0yV0")
                 .tosId("to_nHelySbXX4X2")
-                .build());
+                .build();
+    }
 
-        log.info("Alice: id={}, receiver={}, wallet={}", alice.getId(), alice.getReceiverId(), alice.getWalletId());
-        log.info("Bob:   id={}, receiver={}, wallet={}", bob.getId(), bob.getReceiverId(), bob.getWalletId());
-        log.info("Bootstrap complete! Service is ready.");
+    private void logUser(String label, User user) {
+        log.info("{}: id={}, receiver={}, wallet={}",
+                label, user.getId(), user.getReceiverId(), user.getWalletId());
     }
 }

@@ -2,7 +2,7 @@ package com.example.blindpay.controller;
 
 import com.example.blindpay.dto.PayinRequest;
 import com.example.blindpay.dto.PayoutRequest;
-import com.example.blindpay.model.User;
+import com.example.blindpay.dto.UserResponse;
 import com.example.blindpay.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,15 +25,17 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping
-    public List<User> listUsers() {
+    public List<UserResponse> listUsers() {
         log.info("GET /api/users");
-        return userService.getAllUsers();
+        return userService.getAllUsers().stream()
+                .map(UserResponse::from)
+                .toList();
     }
 
     @GetMapping("/{id}")
-    public User getUser(@PathVariable Long id) {
+    public UserResponse getUser(@PathVariable Long id) {
         log.info("GET /api/users/{}", id);
-        return userService.getUser(id);
+        return UserResponse.from(userService.getUser(id));
     }
 
     @GetMapping("/{id}/balance")
