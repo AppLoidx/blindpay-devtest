@@ -132,3 +132,28 @@ Design specs and implementation plans:
 - `docs/superpowers/specs/2026-05-31-tests-ui-design.md`
 - `docs/superpowers/plans/2026-05-31-blindpay-test-service.md`
 - `docs/superpowers/plans/2026-05-31-tests-ui-pitest.md`
+
+## Dev Setup
+
+- LSP: jdtls via Mason (already installed at `~/.local/share/nvim/mason/packages/jdtls/`)
+- Lombok jar bundled — symbol navigation works for generated code
+- See `.claude/lsp-setup.md` for troubleshooting
+- Note: jdtls is not exposed as a Claude Code tool — Claude uses Grep/Glob for navigation
+
+## Codebase Map
+
+```
+src/main/java/com/example/blindpay/
+  controller/   — REST endpoints: SetupController, TransferController, UserController (payin/payout/transfer/setup)
+  service/      — Business logic: UserService (user ops), BlindPayApiService (API orchestration), CurlHttpClient (HTTP via curl)
+  repository/   — Data access: UserRepository (JPA, User entity)
+  model/        — JPA entities: User
+  dto/          — Request/response objects: PayinRequest, PayoutRequest, TransferRequest, UserResponse, ApiErrorResponse
+  config/       — Configuration: BlindPayProperties (@ConfigurationProperties), RestClientConfig (empty, intentional)
+  exception/    — Error handling: BlindPayApiException, GlobalExceptionHandler (@RestControllerAdvice)
+  bootstrap/    — Startup: DataInitializer (seeds Alice & Bob via CommandLineRunner)
+
+src/main/resources/
+  application.yml — Single profile (default): server port, H2, BlindPay API key/URL/instanceId
+  static/index.html — Simple test UI
+```
