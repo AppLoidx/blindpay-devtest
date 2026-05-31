@@ -1,0 +1,39 @@
+# Build output
+target/
+build/
+out/
+*.class
+*.jar
+*.war
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+.settings/
+.classpath
+.project
+.factorypath
+
+# Logs and temp
+logs/
+tmp/
+temp/
+*.log
+
+# Generated code
+generated/
+**/generated-sources/**
+**/generated-test-sources/**
+
+# Test reports
+**/surefire-reports/**
+**/failsafe-reports/**
+
+# Coverage
+.jacoco/
+jacoco.exec
+coverage/
+
+# Mutation testing reports
+**/pit-reports/**
